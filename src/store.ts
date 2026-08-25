@@ -1,0 +1,8 @@
+import { create } from 'zustand';
+import { persist } from 'zustand/middleware';
+export type Theme='midnight'|'mint'|'sakura'|'sunset'|'cyber';
+export type Schedule={start:string;end:string};
+export type Goal={id:string;name:string;price:number;createdAt:number;completedAt?:number;status:'active'|'completed'};
+export type AppState={salary:number;workingDays:number;workHours:number;schedules:Schedule[];theme:Theme;compact:boolean;alwaysOnTop:boolean;goal:Goal|null;totalXp:number;totalWorkMinutes:number;totalEarned:number;setSalary:(v:number)=>void;setWorkingDays:(v:number)=>void;setWorkHours:(v:number)=>void;setSchedules:(v:Schedule[])=>void;setTheme:(v:Theme)=>void;setCompact:(v:boolean)=>void;setAlwaysOnTop:(v:boolean)=>void;setGoal:(g:Goal|null)=>void;addXp:(v:number)=>void;reset:(v?:Partial<AppState>)=>void};
+const defaultState={salary:15000,workingDays:22,workHours:8,schedules:[{start:'09:00',end:'12:00'},{start:'13:30',end:'18:00'}] as Schedule[],theme:'midnight' as Theme,compact:false,alwaysOnTop:true,goal:{id:'starter',name:'给自己买一杯咖啡',price:35,createdAt:Date.now(),status:'active' as const},totalXp:0,totalWorkMinutes:0,totalEarned:0};
+export const useAppStore=create<AppState>()(persist((set)=>({...defaultState,setSalary:(v)=>set({salary:Math.max(0,v)}),setWorkingDays:(v)=>set({workingDays:Math.max(1,Math.round(v))}),setWorkHours:(v)=>set({workHours:Math.max(.25,v)}),setSchedules:(v)=>set({schedules:v}),setTheme:(v)=>set({theme:v}),setCompact:(v)=>set({compact:v}),setAlwaysOnTop:(v)=>set({alwaysOnTop:v}),setGoal:(goal)=>set({goal}),addXp:(v)=>set(s=>({totalXp:s.totalXp+Math.max(0,v)})),reset:(v)=>set({...defaultState,...v})})),{name:'aoyixia-state'}));

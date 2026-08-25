@@ -1,0 +1,21 @@
+[package]
+name = "aoyixia"
+version = "0.1.0"
+description = "再熬一下 desktop companion"
+authors = ["ethanjiang1008-lgtm"]
+edition = "2021"
+
+[lib]
+name = "aoyixia_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2.0", features = [] }
+
+[dependencies]
+tauri = { version = "2.0", features = [] }
+tauri-plugin-shell = "2.0"
+
+[features]
+default = ["custom-protocol"]
+custom-protocol = ["tauri/custom-protocol"]
