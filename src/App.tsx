@@ -2,10 +2,16 @@ import {useEffect,useMemo,useState} from 'react';
 import {getCurrentWindow} from '@tauri-apps/api/window';
 import {useAppStore} from './store';
 import {dayInfo,formatMoney,formatTime,levelFromXp,levelTitle,moneyFor} from './engine';
-import {Clock3,Goal as GoalIcon,Settings2,Trophy,Palette,Minimize2,Maximize2,Sparkles,Minus,X,Pin,PinOff} from 'lucide-react';
+import {Clock3,Goal as GoalIcon,Settings2,Palette,Minimize2,Maximize2,Sparkles,Minus,X,Pin,PinOff,Heart} from 'lucide-react';
 import './styles.css';
 
 const quotes=['今天也没有辞职成功。','你不是热爱工作，你只是热爱工资。','再熬一下。','工资正在缓慢靠近。','距离下班只剩最后一个人生。','今天辛苦了。'];
+const moods=[
+  {emoji:'🐱',name:'摸鱼中',text:'先别卷了，喝口水。'},
+  {emoji:'😼',name:'精神抖擞',text:'今天的班，也能活着下班。'},
+  {emoji:'🥱',name:'有点困',text:'我建议你现在离开电脑 30 秒。'},
+  {emoji:'🫠',name:'工位融化',text:'工资到账以前，我们都要坚强。'}
+];
 const appWindow=getCurrentWindow();
 
 function App(){
@@ -13,6 +19,8 @@ function App(){
   const [now,setNow]=useState(new Date());
   const [tab,setTab]=useState<'today'|'goal'|'achievements'|'settings'>('today');
   const [showQuote,setShowQuote]=useState(true);
+  const [mood,setMood]=useState(0);
+  const [petPulse,setPetPulse]=useState(false);
   const info=useMemo(()=>dayInfo(now,s.schedules),[now,s.schedules]);
   const dailySalary=s.salary/s.workingDays;
   const hourly=s.workHours?dailySalary/s.workHours:0;
@@ -22,19 +30,21 @@ function App(){
   const goal=s.goal;
   const goalProgress=goal?Math.min(1,earned/goal.price):0;
 
+  useEffect(()=>{const id=window.setInterval(()=>setNow(new Date()),1000);return()=>clearInterval(id)},[]);
+  useEffect(()=>{document.documentElement.dataset.theme=s.theme},[s.theme]);
+  useEffect(()=>{void appWindow.setAlwaysOnTop(s.alwaysOnTop)},[s.alwaysOnTop]);
   useEffect(()=>{
-    const id=window.setInterval(()=>setNow(new Date()),1000);
-    return()=>clearInterval(id)
+    const id=window.setInterval(()=>setMood(Math.floor(Math.random()*moods.length)),20000);
+    return()=>clearInterval(id);
   },[]);
 
-  useEffect(()=>{document.documentElement.dataset.theme=s.theme},[s.theme]);
-
-  useEffect(()=>{
-    void appWindow.setAlwaysOnTop(s.alwaysOnTop);
-  },[s.alwaysOnTop]);
-
   const quote=quotes[now.getDate()%quotes.length];
-  const toggleCompact=()=>s.setCompact(!s.compact);
+  const currentMood=moods[mood];
+  const interact=()=>{
+    setPetPulse(true);
+    setMood((mood+1)%moods.length);
+    window.setTimeout(()=>setPetPulse(false),500);
+  };
 
   return <div className={`app ${s.compact?'compact':''}`}>
     <header data-tauri-drag-region>
@@ -45,7 +55,7 @@ function App(){
       <div className="headerRight">
         <div className="windowBtns">
           <button className="windowBtn" onClick={()=>void appWindow.minimize()} title="最小化"><Minus size={15}/></button>
-          <button className="windowBtn" onClick={toggleCompact} title="切换紧凑模式">{s.compact?<Maximize2 size={15}/>:<Minimize2 size={15}/>}</button>
+          <button className="windowBtn" onClick={()=>s.setCompact(!s.compact)} title="切换紧凑模式">{s.compact?<Maximize2 size={15}/>:<Minimize2 size={15}/>}</button>
           <button className="windowBtn closeBtn" onClick={()=>void appWindow.close()} title="关闭"><X size={15}/></button>
         </div>
         <div className="headerBtns">
@@ -57,7 +67,12 @@ function App(){
 
     <nav><button className={tab==='today'?'active':''} onClick={()=>setTab('today')}>今日</button><button className={tab==='goal'?'active':''} onClick={()=>setTab('goal')}>目标</button><button className={tab==='achievements'?'active':''} onClick={()=>setTab('achievements')}>成就</button><button className={tab==='settings'?'active':''} onClick={()=>setTab('settings')}>设置</button></nav>
 
-    {tab==='today'&&<main className="today"><section className="hero card"><div className="eyebrow">{now.toLocaleDateString('zh-CN',{month:'long',day:'numeric',weekday:'long'})}</div><div className="heroLabel">今天已赚</div><div className="money">{formatMoney(earned)}</div><div className="perSec">+ {formatMoney(hourly/3600)} / 秒</div><div className="progressTrack"><div className="progressFill" style={{width:`${info.progress*100}%`}}/></div><div className="progressRow"><span>工作进度 {Math.round(info.progress*100)}%</span><strong>{info.isWorkday?formatTime(info.remainingMinutes):'周末休息'}</strong></div><div className="countdown">{info.isWorkday?(info.remainingMinutes>0?<><Clock3 size={16}/>距离下班 {formatTime(info.remainingMinutes)}</>:<>🎉 今天活下来了</>):'🛋️ 周末不用赚命'}</div></section>
+    {tab==='today'&&<main className="today"><section className="card companion companionHero">
+      <button className={`pet ${petPulse?'pulse':''}`} onClick={interact} title="点我一下"><span>{currentMood.emoji}</span><i/></button>
+      <div className="petCopy"><div className="smallLabel">今日搭子 · Lv.{lvl} {levelTitle(lvl)}</div><div className="petMood">{currentMood.name}</div><div className="quote">{currentMood.text}</div><button className="petAction" onClick={interact}><Heart size={13}/> 点我陪你一下</button></div>
+      <div className="petBadge">摸鱼搭子</div>
+    </section>
+    <section className="hero card"><div className="eyebrow">{now.toLocaleDateString('zh-CN',{month:'long',day:'numeric',weekday:'long'})}</div><div className="heroLabel">今天已赚</div><div className="money">{formatMoney(earned)}</div><div className="perSec">+ {formatMoney(hourly/3600)} / 秒</div><div className="progressTrack"><div className="progressFill" style={{width:`${info.progress*100}%`}}/></div><div className="progressRow"><span>工作进度 {Math.round(info.progress*100)}%</span><strong>{info.isWorkday?formatTime(info.remainingMinutes):'周末休息'}</strong></div><div className="countdown">{info.isWorkday?(info.remainingMinutes>0?<><Clock3 size={16}/>距离下班 {formatTime(info.remainingMinutes)}</>:<>🎉 今天活下来了</>):'🛋️ 周末不用赚命'}</div></section>
     <section className="grid2"><div className="card stat"><span>日薪</span><strong>{formatMoney(dailySalary)}</strong><small>每月 {s.workingDays} 个工作日</small></div><div className="card stat"><span>时薪</span><strong>{formatMoney(hourly)}</strong><small>每分钟 {formatMoney(hourly/60)}</small></div></section>
     {goal&&<section className="card goalCard"><div className="cardTitle"><span><GoalIcon size={16}/> 当前愿望</span><button className="tinyLink" onClick={()=>setTab('goal')}>查看</button></div><h3>{goal.name}</h3><div className="goalMeta"><span>{Math.round(goalProgress*100)}%</span><span>{formatMoney(Math.max(0,goal.price-earned))} 还差</span></div><div className="progressTrack thin"><div className="progressFill" style={{width:`${goalProgress*100}%`}}/></div><div className="goalHint">按当前时薪，约还需要 <b>{formatTime(Math.max(0,(goal.price-earned)/(hourly||1)*60))}</b> 工作</div></section>}
     <section className="card companion"><div className="cat">🐱</div><div><div className="smallLabel">今日搭子 · Lv.{lvl} {levelTitle(lvl)}</div><div className="quote">{showQuote?quote:'再熬一下。'}</div></div><button className="quoteBtn" onClick={()=>setShowQuote(!showQuote)}><Sparkles size={16}/></button></section>
